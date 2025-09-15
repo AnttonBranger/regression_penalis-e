@@ -123,15 +123,21 @@ Nombre de lambda testé
 length(cv_lasso)
 ```
 
-Affichage du nom des gènes sélectionnés et de leur p-value correspondante
+
 ```{r}
 plot(cv_lasso$glmnet.fit, xvar = "lambda")
 abline(v = log(cv_lasso$lambda.min), lty = 2)
 abline(v = log(cv_lasso$lambda.1se), lty = 2)
-
+```
+Affichage du nom des gènes sélectionnés et de leur p-value correspondante
+```{r}
 lasso_var <- as.matrix(coef(cv_lasso, s = "lambda.min"))
 lasso_var1 <- as.matrix(cv_lasso$glmnet.fit$beta[,which(cv_lasso$lamda == cv_lasso$lambda.min)])
-all(lasso_var == lasso_var1)
+all(lasso_var[-1,] == lasso_var1)
+
+genes <- names(which(abs(lasso_var[,1]) > 1e-10))
+lasso_ind <- which(abs(lasso_var[,1]) > 1e-10) - 1
+data.frame(gene = genes, beta = beta.uni[lasso_ind], se = se[lasso_ind], pval = pval[lasso_ind])
 ```
 
 
@@ -139,13 +145,33 @@ all(lasso_var == lasso_var1)
 
 Validation croisée à 5 fold pour choisir le meilleur modèle de regression elasticnet
 ```{r}
-cv_lasso <- cv.glmnet(X, Y, alpha = 0.8)
-plot(cv_lasso)
+cverror <- rep(NA, 11)
+for(j in 0:10){
+  fit <- cv.glmnet(X, Y, alpha = (j/10))
+  cverror[j+1] <- min(cv_lasso$cvm)
+  assign(paste("fit_", j, sep = ""), fit)
+}
+which.min(cverror) 
+```
+RIDGE l'emporte car si on enlève 1 on arrive à 0
+
+```{r}
+plot(cv_elasticnet$glmnet.fit, xvar = "lambda")
+abline(v = log(cv_elasticnet$lambda.min), lty = 2)
+abline(v = log(cv_elasticnet$lambda.1se), lty = 2)
 ```
 
 Affichage du nom des gènes sélectionnés et de leur p-value correspondante
 ```{r}
+elasticnet_var <- as.matrix(coef(cv_elasticnet, s = "lambda.min"))
+elasticnet_var1 <- as.matrix(cv_elasticnet$glmnet.fit$beta[,which(cv_elasticnet$lamda == cv_elasticnet$lambda.min)])
+all(elasticnet_var[-1,] == elasticnet_var1)
 
+genes <- names(which(abs(elasticnet_var[,1]) > 1e-10))
+elasticnet_ind <- which(abs(elasticnet_var[,1]) > 1e-10) - 1
+data.frame(gene = genes, beta = beta.uni[elasticnet_ind], se = se[elasticnet_ind], pval = pval[elasticnet_ind])
+length(genes)
+sum(pval < 1e-7)
 ```
 
 ## Choix optimale du alpha
