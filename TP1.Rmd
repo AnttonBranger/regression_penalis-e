@@ -1,0 +1,74 @@
+---
+title: "TP1"
+author: "Antton Branger"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+rm(list = ls())
+```
+
+Chargement des packages
+```{r, include=FALSE}
+library(tidyverse)
+library(glmnet)
+```
+
+# Prise en charge du jeu de données
+
+Importation des données
+```{r}
+breast_cancer <- read.table("breast_cancer.txt", header = T)
+```
+
+Détaction des valeurs manquantes
+```{r}
+all(is.na(breast_cancer))
+```
+
+Séparations du jeux de données en deux : la variable à expliquer et les variables explicatives
+```{r}
+Y <- breast_cancer %>% select(Months)
+X <- breast_cancer %>% select(-Months)
+```
+
+Nombre de patients et nombre de variables explicatives
+```{r}
+n <- nrow(breast_cancer)
+p <- ncol(X)
+```
+
+Distribution de Y
+```{r}
+summary(Y)
+```
+
+Distribution des variables explicatives
+```{r}
+
+```
+
+Distribution des écarts-types des variables explicatives
+```{r}
+
+```
+
+On centre la variable y
+```{r}
+
+```
+
+On centre et réduit les colonnes de X à l'aide de la fonction scale
+```{r}
+
+```
+
+# Analyse univariée
+
+# Régressions LASSO et elasticnet de la librairie glmnet
+
