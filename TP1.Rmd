@@ -14,6 +14,7 @@ rm(list = ls())
 ```
 
 Chargement des packages
+
 ```{r, include=FALSE}
 library(tidyverse)
 library(glmnet)
@@ -22,53 +23,97 @@ library(glmnet)
 # Prise en charge du jeu de données
 
 Importation des données
+
 ```{r}
 breast_cancer <- read.table("breast_cancer.txt", header = T)
 ```
 
 Détaction des valeurs manquantes
+
 ```{r}
 all(is.na(breast_cancer))
 ```
 
 Séparations du jeux de données en deux : la variable à expliquer et les variables explicatives
+
 ```{r}
-Y <- breast_cancer %>% select(Months)
-X <- breast_cancer %>% select(-Months)
+Y <- as.numeric(breast_cancer[,1])
+X <- as.matrix(breast_cancer[,-1])
+rm(breast_cancer)
 ```
 
 Nombre de patients et nombre de variables explicatives
+
 ```{r}
-n <- nrow(breast_cancer)
+n <- length(Y)
 p <- ncol(X)
 ```
 
 Distribution de Y
+
 ```{r}
 summary(Y)
 ```
 
 Distribution des variables explicatives
-```{r}
 
+```{r}
+summary(apply(X, 2, mean))
 ```
 
 Distribution des écarts-types des variables explicatives
-```{r}
 
+```{r}
+summary(apply(X, 2, sd))
 ```
 
 On centre la variable y
-```{r}
 
+```{r}
+Y <- scale(Y, center = T, scale = F)
 ```
 
 On centre et réduit les colonnes de X à l'aide de la fonction scale
-```{r}
 
+```{r}
+X <- scale(X, center = T, scale = T)
 ```
 
 # Analyse univariée
 
+$$ \hat{\beta} = (X^TX)^{-1}X^TY $$ 
+
+Calcul du vecteur composé des p estimateurs des écarts types
+```{r}
+beta.uni <- as.vector((t(X) %*% Y)/(n - 1))
+```
+
+Vecteur des estimateurs des écarts-types de coefficients $$ \hat{\beta_1^u}, ... , \hat{\beta_p^u}$$
+```{r}
+residus <- Y - X %*% beta.uni
+sigma2.uni <- sum(residus**2)/(n - 2)
+se <- sqrt(sigma2.uni)
+```
+
+Vérification avec la fonction lm()
+```{r}
+i = 10625
+summary(lm(Y ~ X[,i]))$coefficients[2, 1:2]
+beta.uni[i]
+se[i]
+```
+
+Calculer les p-value
+```{r}
+pval <- pchisq( (beta.uni/se)**2, df = 1, lower = F)
+qqplot(-log10(ppoints(p)), -log10(pval), pch = 4)
+abline(0, 1)
+```
+
 # Régressions LASSO et elasticnet de la librairie glmnet
+
+Validation croisée à 5 fold pour choisir le meilleur modèle de regression LASSO
+```{r}
+
+```
 
