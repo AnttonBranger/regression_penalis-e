@@ -90,8 +90,7 @@ beta.uni <- as.vector((t(X) %*% Y)/(n - 1))
 
 Vecteur des estimateurs des écarts-types de coefficients $$ \hat{\beta_1^u}, ... , \hat{\beta_p^u}$$
 ```{r}
-residus <- Y - X %*% beta.uni
-sigma2.uni <- sum(residus**2)/(n - 2)
+sigma2.uni <- colSums((matrix(rep(Y, ncol(X)), nrow = n, byrow = F) - t(t(X) * beta.uni))**2)/(n - 2)
 se <- sqrt(sigma2.uni)
 ```
 
@@ -112,8 +111,42 @@ abline(0, 1)
 
 # Régressions LASSO et elasticnet de la librairie glmnet
 
+## Regression LASSO 
+
 Validation croisée à 5 fold pour choisir le meilleur modèle de regression LASSO
+```{r}
+cv_lasso <- cv.glmnet(X, Y, alpha = 1, nfolds = 5)
+plot(cv_lasso)
+```
+Nombre de lambda testé
+```{r}
+length(cv_lasso)
+```
+
+Affichage du nom des gènes sélectionnés et de leur p-value correspondante
+```{r}
+plot(cv_lasso$glmnet.fit, xvar = "lambda")
+abline(v = log(cv_lasso$lambda.min), lty = 2)
+abline(v = log(cv_lasso$lambda.1se), lty = 2)
+
+lasso_var <- as.matrix(coef(cv_lasso, s = "lambda.min"))
+lasso_var1 <- as.matrix(cv_lasso$glmnet.fit$beta[,which(cv_lasso$lamda == cv_lasso$lambda.min)])
+all(lasso_var == lasso_var1)
+```
+
+
+## Regression elasticnet
+
+Validation croisée à 5 fold pour choisir le meilleur modèle de regression elasticnet
+```{r}
+cv_lasso <- cv.glmnet(X, Y, alpha = 0.8)
+plot(cv_lasso)
+```
+
+Affichage du nom des gènes sélectionnés et de leur p-value correspondante
 ```{r}
 
 ```
+
+## Choix optimale du alpha
 
