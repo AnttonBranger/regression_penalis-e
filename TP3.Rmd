@@ -19,6 +19,9 @@ library(tidyverse)
 library(glmnet)
 library(caret)
 library(pROC)
+library(mnormt)
+library(grplasso)
+library(gglasso)
 ```
 
 Importation des données
@@ -44,6 +47,7 @@ lambda_grid <- seq(0.1, 1, length.out = 100)
 cv_ridge <- cv.glmnet(x = X, y = Y, nfolds = 5, family = "binomial", alpha = 0, lambda = lambda_grid)
 plot(cv_ridge)
 ```
+Ici on met notre propre grille de lambda car avec la grille de base on avait des pointillé collés à un bord (on avait donc peu-être pas testé le meilleur lambda)
 
 ```{r, warning=FALSE}
 pred_ridge <- predict(cv_ridge, X, type = "response")
@@ -68,13 +72,70 @@ auc(roc_lasso)
 
 ## Regression logistique avec elasticnet
 
-```{r, include=FALSE}
+```{r}
 lambda_grid <- exp(seq(log(0.01), log(1), length.out = 1000))
 errcv <- rep(NA, 9)
 for(j in 1:9){
-  fit_enet <- cv.glmnet(x = X, y = Y, nfolds = 5, family = "binomial", alpha = j/10, lambda = lambda_grid)
-  errcv[j] = min(fit_enet$cvm)
+  fit_enet <- cv.glmnet(x = X, y = Y, nfolds = 5, 
+                        family = "binomial", 
+                        alpha = j/10, 
+                        lambda = lambda_grid)
+  errcv[j] = min(fit_enet$cvm) # attention si on choisit type.measure = auc il faut maximiser et non pas minimiser
   assign(paste("fit", j, sep = ""), fit_enet)
 }
+enetcv_fit <- get(paste("fit", which.min(errcv), sep = ""))
+plot(enetcv_fit)
+pred_enet <- predict(enetcv_fit, X, type = "response")
+roc_enet <- roc(Y, as.vector(pred_enet))
+auc(roc_enet)
+plot(roc_enet)
 ```
 
+# Group LASSO
+
+Génération des données simulées
+```{r}
+rho <- 0.5
+d <-5
+s <- 1
+# Matrice de variance-covariance de dim = 5
+matcov <- rep(rho, d*d) 
+matcov <- matrix(matcov, ncol = d)
+diag(matcov) <- rep(1, d)
+
+C <- 500
+L <- 100
+simu_var_expl <- matrix(rep(0, L*C), ncol = C, nrow = L)
+for(j in 1:L){
+  for(i in 1:(C/d)){
+    vec <- c((d*(i-1) + 1):(d*i))
+    simu_var_expl[j, vec] <- rmnorm(1, rep(0, d), matcov)
+  }
+}
+
+cas1 <- d*c(1:10) # pour ne retenir que 1 variable explicatives sur 5 sur les 50 premières 
+cas2 <- c(1:50) # ne retiens que les 50 premières variables explicatives 
+beta1 <- rep(1, 10)
+beta2 <- rep(1, 50)
+
+ysimu1 <- as.matrix(simu_var_expl)[,cas1] %*% beta1 + rnorm(L, 0, s)
+ysimu2 <- as.matrix(simu_var_expl)[,cas2] %*% beta2 + rnorm(L, 0, s)
+group <- floor(rep(1:C-1)/d) + 1
+rescv1 <- cv.gglasso(x = simu_var_expl, y = ysimu1, group = group)
+plot(rescv1)
+seuil1 <- rescv1$lambda.1se
+res1 <- gglasso(x = simu_var_expl, y = ysimu1, group = group, lambda = seuil1) # group = group dit que si une des variables reste dans le modèle alors toutes les autres du groupe y reste 
+
+rescv2 <- cv.gglasso(x = simu_var_expl, y = ysimu2, group = group)
+plot(rescv2)
+seuil2 <- rescv2$lambda.1se
+res1 <- gglasso(x = simu_var_expl, y = ysimu2, group = group, lambda = seuil2)
+
+
+coef1 <- rescv1$beta
+coef2 <- rescv2$beta
+
+ind1 <- which(coef1 != 0)
+ind2 <- which(coef2 != 0)
+```
+Ligne de droite = lambda.min et ligne de gauche = lambda.1st

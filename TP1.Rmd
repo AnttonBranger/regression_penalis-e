@@ -129,6 +129,8 @@ plot(cv_lasso$glmnet.fit, xvar = "lambda")
 abline(v = log(cv_lasso$lambda.min), lty = 2)
 abline(v = log(cv_lasso$lambda.1se), lty = 2)
 ```
+Fillamment correspond à un coefficient
+
 Affichage du nom des gènes sélectionnés et de leur p-value correspondante
 ```{r}
 lasso_var <- as.matrix(coef(cv_lasso, s = "lambda.min"))
