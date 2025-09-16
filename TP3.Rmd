@@ -1,0 +1,80 @@
+---
+title: "TP3"
+author: "Antton Branger"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+rm(list = ls())
+```
+
+Chargement des packages
+```{r, include=FALSE}
+library(tidyverse)
+library(glmnet)
+library(caret)
+library(pROC)
+```
+
+Importation des données
+```{r}
+telelogit <- read.table("telelogit.txt", header = T)
+```
+
+# Regression logistique pénalisée
+
+Préparation des données
+```{r}
+Y <- telelogit$Y
+X <- as.matrix(telelogit[,2:161])
+dim(X)
+```
+
+
+## Regression logistique RIDGE
+
+Ici nfolds = 5 car petit jeu de données
+```{r}
+lambda_grid <- seq(0.1, 1, length.out = 100)
+cv_ridge <- cv.glmnet(x = X, y = Y, nfolds = 5, family = "binomial", alpha = 0, lambda = lambda_grid)
+plot(cv_ridge)
+```
+
+```{r, warning=FALSE}
+pred_ridge <- predict(cv_ridge, X, type = "response")
+roc_ridge <- roc(Y, as.vector(pred_ridge))
+auc(roc_ridge)
+```
+
+## Regression logistique LASSO
+
+On change le lambda_grid pour avoir des résultats plus fins pour les petites valeurs et moins pour les grandes (astuce classique)
+```{r}
+lambda_grid <- exp(seq(log(0.01), log(1), length.out = 100))
+cv_lasso <- cv.glmnet(x = X, y = Y, nfolds = 5, family = "binomial", alpha = 1, lambda = lambda_grid)
+plot(cv_lasso)
+```
+
+```{r, warning=FALSE}
+pred_lasso <- predict(cv_lasso, X, type = "response")
+roc_lasso <- roc(Y, as.vector(pred_lasso))
+auc(roc_lasso)
+```
+
+## Regression logistique avec elasticnet
+
+```{r, include=FALSE}
+lambda_grid <- exp(seq(log(0.01), log(1), length.out = 1000))
+errcv <- rep(NA, 9)
+for(j in 1:9){
+  fit_enet <- cv.glmnet(x = X, y = Y, nfolds = 5, family = "binomial", alpha = j/10, lambda = lambda_grid)
+  errcv[j] = min(fit_enet$cvm)
+  assign(paste("fit", j, sep = ""), fit_enet)
+}
+```
+
